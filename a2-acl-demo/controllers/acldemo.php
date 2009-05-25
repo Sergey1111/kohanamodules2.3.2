@@ -20,7 +20,7 @@ class AclDemo_Controller extends Controller {
 		
 		echo '<b>See source for usage, use links to verify output</b><br>';
 		
-		for($i = 1; $i < 12; $i++)
+		for($i = 1; $i < 13; $i++)
 		{
 			echo html::anchor('acldemo/demo'.$i,'demo ' . $i),'<br>';
 		}
@@ -238,6 +238,26 @@ class AclDemo_Controller extends Controller {
 		
 		// just run some random other demo to see if the ACLs still function correct
 		$this->demo10();
+
+	}			
+
+	public function demo12()
+	{
+		// Multiple roles - this isn't supported by Zend_ACL, so no comparison to Zend here
+		
+		$this->acl2 = new Acl;
+		
+		$this->acl2->add_resource('forum');
+		$this->acl2->add_resource('poll');
+		
+		$this->acl2->add_role('forum_manager');
+		$this->acl2->add_role('poll_manager');
+		
+		$this->acl2->allow('forum_manager','forum','edit');
+		$this->acl2->allow('poll_manager','poll','edit');
+		
+		// supply multiple roles in the is_allowed method
+		echo ($this->acl2->is_allowed(array('forum_manager','poll_manager'),'poll','edit') ? 'yes' : 'no') . '<br>';	
 
 	}			
 } 

@@ -192,35 +192,45 @@ class Acl {
 			'privilege'=> $privilege
 		);
 		
-		// normalize role & resource to a string value (or NULL)
-		$role = $role !== NULL ? ($role instanceof Acl_Role_Interface ? $role->get_role_id() : (string) $role) : NULL;
+		
+		// normalize role to an array of string values (if an array of roles is given, any allowed rule for any of the roles will be returned)
+		$roles = $role !== NULL ? ($role instanceof Acl_Role_Interface ? $role->get_role_id() : (is_array($role) ? $role : array((string) $role))) : NULL;
+		//$role = $role !== NULL ? ($role instanceof Acl_Role_Interface ? $role->get_role_id() : (string) $role) : NULL;
+		
+		// normalize resource to a string value (or NULL)
 		$resource = $resource !== NULL ? ($resource instanceof Acl_Resource_Interface ? $resource->get_resource_id() : (string) $resource) : NULL;
-		
-		//echo $role,'-',$resource,'-',$privilege,'<br>';
-		
-		// role unknown
-		if($role !== NULL AND !$this->has_role($role))
-			return FALSE;
-			
+
 		// resource unknown
 		if($resource !== NULL AND !$this->has_resource($resource))
 			return FALSE;
 
-		// make role array
-		$role = array($role);
-		
-		do
+		// try to find a matching rule for any of the roles
+		foreach($roles as $role)
 		{
-			//echo 'running for resource: ' . $resource .  '<br>';
-								
-			// try to find rule
-			if( ($rule = $this->_find_match_role($resource,$role,$privilege) ) )
+			$rsc = $resource;
+			
+			echo $role,'-',$rsc,'-',$privilege,'<br>';
+			
+			// role unknown
+			if($role !== NULL AND !$this->has_role($role))
+				return FALSE;
+	
+			// make role array
+			$role = array($role);
+			
+			do
 			{
-				return $rule['allow'];
+				//echo 'running for resource: ' . $resource .  '<br>';
+									
+				// try to find rule
+				if( ($rule = $this->_find_match_role($rsc,$role,$privilege) ) )
+				{
+					return $rule['allow'];
+				}
 			}
+			// go level up in resources tree (child resources inherit rules from parent)
+			while($rsc !== NULL AND ($rsc = $this->_resources[$rsc]['parent']) );
 		}
-		// go level up in resources tree (child resources inherit rules from parent)
-		while($resource !== NULL AND ($resource = $this->_resources[$resource]['parent']) );
 
 		return FALSE;
 	}
