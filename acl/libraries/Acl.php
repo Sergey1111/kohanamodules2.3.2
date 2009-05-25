@@ -209,7 +209,7 @@ class Acl {
 		{
 			$rsc = $resource;
 			
-			echo $role,'-',$rsc,'-',$privilege,'<br>';
+			//echo $role,'-',$rsc,'-',$privilege,'<br>';
 			
 			// role unknown
 			if($role !== NULL AND !$this->has_role($role))
