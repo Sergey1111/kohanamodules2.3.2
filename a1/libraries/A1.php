@@ -18,7 +18,7 @@
  * @license    http://layerful.org/license MIT
  * @since    0.3.0
  */
-class A1 {
+class A1_Core {
 
 	protected $config_name;
 	protected $session;
@@ -112,7 +112,7 @@ class A1 {
 		return $this->logged_in();
 	}
 
-	private function complete_login($user, $remember = FALSE)
+	protected function complete_login($user, $remember = FALSE)
 	{
 		if ($remember === TRUE AND $this->config['lifetime'])
 		{

@@ -28,7 +28,7 @@
  *
  */
 
-class A2 extends Acl {
+class A2_Core extends Acl {
 
 	public $a1; 				 // the Authentication library (used to retrieve user)
 	protected $guest_role; // name of the guest role (used when no user is logged in)
