@@ -194,7 +194,7 @@ class Acl_Core {
 		
 		
 		// normalize role to an array of string values (if an array of roles is given, any allowed rule for any of the roles will be returned)
-		$roles = $role !== NULL ? ($role instanceof Acl_Role_Interface ? $role->get_role_id() : (is_array($role) ? $role : array((string) $role))) : NULL;
+		$roles = $role !== NULL ? ($role instanceof Acl_Role_Interface ? $role->get_role_id() : (is_array($role) ? $role : array((string) $role))) : array(NULL);
 		//$role = $role !== NULL ? ($role instanceof Acl_Role_Interface ? $role->get_role_id() : (string) $role) : NULL;
 		
 		// normalize resource to a string value (or NULL)
