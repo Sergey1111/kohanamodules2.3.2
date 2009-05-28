@@ -85,7 +85,7 @@ class A1_Core {
 		// Get the user from the cookie
 		if ($status === FALSE AND $this->config['lifetime'])
 		{
-			if ( ($token = cookie::get("a1_{$this->config_name}_autologin")) )
+			if ( ($token = cookie::get('a1_'.$this->config_name.'_autologin')) )
 			{
 				$token = explode('.',$token);
 			
@@ -122,7 +122,7 @@ class A1_Core {
 			$user->{$this->columns['token']} = $token;
 			
 			// TODO: find a better way to store used_id in cookie
-			cookie::set("a1_{$this->config_name}_autologin", $token . '.' . $this->primary_key_value, $this->config['lifetime']);
+			cookie::set('a1_'.$this->config_name.'_autologin', $token . '.' . $user->primary_key_value, $this->config['lifetime']);
 		}
 
 		if(isset($this->columns['last_login']))
@@ -178,9 +178,9 @@ class A1_Core {
 	 */
 	public function logout($destroy = FALSE)
 	{
-		if (cookie::get("a1_{$this->config_name}_autologin"))
+		if (cookie::get('a1_'.$this->config_name.'_autologin'))
 		{
-			cookie::delete("a1_{$this->config_name}_autologin");
+			cookie::delete('a1_'.$this->config_name.'_autologin');
 		}
 		
 		if ($destroy === TRUE)

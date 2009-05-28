@@ -87,13 +87,12 @@ class A2demo_Controller extends Controller {
 		$post = Validation::factory($_POST)
 			->pre_filter('trim')
 			->add_rules('username', 'required', 'length[4,127]')
-			->add_rules('password', 'required');		
-			
+			->add_rules('password', 'required');
+
 		if($post->validate())
 		{
-			if($this->a1->login($post['username'],$post['password']))
+			if($this->a1->login($post['username'],$post['password'], isset($_POST['remember']) ? (bool) $_POST['remember'] : FALSE))
 			{
-				// login succesful
 				url::redirect( 'a2demo/index' );
 			}
 		}
@@ -102,6 +101,7 @@ class A2demo_Controller extends Controller {
 		echo form::open();
 		echo 'username:' . form::input('username') . '<br>';
 		echo 'password:' . form::password('password') . '<br>';
+		echo 'remember me:' . form::checkbox('remember',TRUE) . '<br>';
 		echo form::submit(array('value'=>'login'));
 		echo form::close();
 	}
@@ -174,7 +174,11 @@ class A2demo_Controller extends Controller {
 	
 	public function db()
 	{
-		echo "<b>Mysql DB structure</b><pre>
+		echo '<b>Mysql DB structure</b><hr>';
+		
+		echo '<b>Please note there are different ways to store your role(s). In this example, only one role per user is supported, and the roles are saved using an ENUM column. You might want to choose a different table schema depending on your requirements</b><hr>';
+		
+		echo "<pre>
 		CREATE TABLE IF NOT EXISTS `users` (
 		  `id` int(12) unsigned NOT NULL auto_increment,
 		  `username` varchar(32) NOT NULL default '',

@@ -201,7 +201,7 @@ class Acl_Core {
 		$resource = $resource !== NULL ? ($resource instanceof Acl_Resource_Interface ? $resource->get_resource_id() : (string) $resource) : NULL;
 
 		// resource unknown
-		if($resource !== NULL AND !$this->has_resource($resource))
+		if( !$this->has_resource($resource) )
 			return FALSE;
 
 		// try to find a matching rule for any of the roles
@@ -212,7 +212,7 @@ class Acl_Core {
 			//echo $role,'-',$rsc,'-',$privilege,'<br>';
 			
 			// role unknown
-			if($role !== NULL AND !$this->has_role($role))
+			if( !$this->has_role($role) )
 				return FALSE;
 	
 			// make role array
