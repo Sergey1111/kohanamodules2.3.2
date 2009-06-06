@@ -71,45 +71,54 @@ class A1_Core {
 	}
 
 	/**
-	 * Check if there is an active session.
+	 * Returns TRUE is a user is currently logged in
 	 *
 	 * @return  boolean
 	 */
 	public function logged_in()
 	{
+		return is_object($this->get_user());
+	}
+
+	/**
+	 * Returns the user - if any
+	 *
+	 * @return  object / FALSE
+	 */
+	public function get_user()
+	{
 		// Get the user from the session
 		$user = $this->session->get($this->config['session_key']);
-		
-		$status = is_object($user) ? true : false;
-		
-		// Get the user from the cookie
-		if ($status === FALSE AND $this->config['lifetime'])
+
+		// User found in session, return
+		if(is_object($user))
+			return $user;
+
+		// Look for user in cookie
+		if( $this->config['lifetime'])
 		{
 			if ( ($token = cookie::get('a1_'.$this->config_name.'_autologin')) )
 			{
 				$token = explode('.',$token);
-			
+
 				if (count($token) === 2 AND is_string($token[0]) AND is_numeric($token[1]))
 				{
 					// Search user on user ID and token. Because user ID is primary key, this is much faster than
 					// searching on just the token.
 					$user = ORM::factory($this->user_model)->where($this->columns['token'],$token[0])->find($token[1]);
-					
+
+					// Found user, complete login and return
 					if ($user->loaded)
 					{
-						$status = true;
 						$this->complete_login($user,TRUE);
+						return $user;
 					}
 				}
 			}
 		}
 
-		return $status === TRUE ? $user : FALSE;
-	}
-	
-	public function get_user()
-	{
-		return $this->logged_in();
+		// No user found, return false
+		return FALSE;
 	}
 
 	protected function complete_login($user, $remember = FALSE)
