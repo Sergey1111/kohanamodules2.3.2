@@ -206,7 +206,7 @@ class A1_Core {
 			$this->session->regenerate();
 		}
 
-		return ! $this->logged_in(NULL);
+		return ! $this->logged_in();
 	}
 
 	/**
