@@ -42,7 +42,7 @@ class AclDemo_Controller extends Controller {
 		//new
 		$this->acl2->allow('guest','blog');
 		$this->acl2->deny('guest','blog','read');
-		echo ($this->acl2->is_allowed('guest','blog') ? 'yes' : 'no') . '<br>';
+		echo ($this->acl2->is_allowed('guest','blog','read') ? 'yes' : 'no') . '<br>';
 	}
 	
 	public function demo2()

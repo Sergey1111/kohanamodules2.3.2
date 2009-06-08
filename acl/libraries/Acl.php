@@ -202,36 +202,19 @@ class Acl_Core {
 		$resource = $resource !== NULL ? ($resource instanceof Acl_Resource_Interface ? $resource->get_resource_id() : (string) $resource) : NULL;
 
 		// resource unknown
-		if( !$this->has_resource($resource) )
+		if( $resource !== NULL && !$this->has_resource($resource) )
 			return FALSE;
 
-		// try to find a matching rule for any of the roles
-		foreach($roles as $role)
+		// loop for matching rule
+		do
 		{
-			$rsc = $resource;
-			
-			//echo $role,'-',$rsc,'-',$privilege,'<br>';
-			
-			// role unknown
-			if( !$this->has_role($role) )
-				return FALSE;
-	
-			// make role array
-			$role = array($role);
-			
-			do
+			if( ($rule = $this->_find_match_role($resource,$roles,$privilege) ) )
 			{
-				//echo 'running for resource: ' . $resource .  '<br>';
-									
-				// try to find rule
-				if( ($rule = $this->_find_match_role($rsc,$role,$privilege) ) )
-				{
-					return $rule['allow'];
-				}
+				return $rule['allow'];
 			}
-			// go level up in resources tree (child resources inherit rules from parent)
-			while($rsc !== NULL AND ($rsc = $this->_resources[$rsc]['parent']) );
 		}
+		// go level up in resources tree (child resources inherit rules from parent)
+		while($resource !== NULL AND ($resource = $this->_resources[$resource]['parent']) );
 
 		return FALSE;
 	}
@@ -248,7 +231,11 @@ class Acl_Core {
 	{
 		foreach($roles as $role)
 		{
-			// find match for this role		
+			// role unknown - skip
+			if( $role !== NULL && !$this->has_role($role) )
+				continue;
+
+			// find match for this role
 			if( ($rule = $this->_find_match($this->_rules,$resource,$role,$privilege) ) )
 			{
 				return $rule;
