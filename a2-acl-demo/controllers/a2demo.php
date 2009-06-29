@@ -183,13 +183,14 @@ class A2demo_Controller extends Controller {
 		  `id` int(12) unsigned NOT NULL auto_increment,
 		  `username` varchar(32) NOT NULL default '',
 		  `password` char(50) NOT NULL,
+		  `token` varchar(32) default NULL,
 		  `logins` int(10) unsigned NOT NULL default '0',
 		  `last_login` int(10) unsigned default NULL,
 		  `role` enum('user','admin') NOT NULL,
 		  PRIMARY KEY  (`id`),
 		  UNIQUE KEY `uniq_username` (`username`)
 		) ENGINE=InnoDB  DEFAULT CHARSET=utf8;
-		
+
 		CREATE TABLE IF NOT EXISTS `blogs` (
 		  `id` int(12) unsigned NOT NULL auto_increment,
 		  `user_id` int(12) unsigned NOT NULL,
