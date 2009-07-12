@@ -25,7 +25,9 @@
  *
  *
  * For updates / questions / suggestions:
- * 
+ * 	Kohana Forum: http://forum.kohanaphp.com/comments.php?DiscussionID=2968
+ * or
+ * 	Mongo List: http://groups.google.com/group/mongodb-user/browse_thread/thread/6d21fa8d818f2966
  * 
  */
 
