@@ -1,5 +1,8 @@
 <?php defined('SYSPATH') OR die('No direct access allowed.');
 
+// NOTE A PHP DRIVER ERROR HAS TO BE SOLVED BEFORE THIS CLASS WORKS PROPERLY
+// http://jira.mongodb.org/browse/PHP-19
+
 class Mango_Iterator implements Iterator, Countable {
 
 	// Class attributes

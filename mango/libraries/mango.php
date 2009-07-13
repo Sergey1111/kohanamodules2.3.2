@@ -156,7 +156,7 @@ class Mango_Core {
 			// Add ID field to columns
 			if( ! isset($this->_columns['_id']) )
 			{
-				$this->_columns['_id'] = array('type'=>'id');
+				$this->_columns['_id'] = array('type'=>'MongoId');
 			}
 
 			// Add foreign key IDs
@@ -271,7 +271,7 @@ class Mango_Core {
 					// a value has been added or removed from array
 					list($modifier,$value) = $this->_changed[$column_name];
 
-					$changed = arr::merge($changed,array( $modifier => array( $prefix.$column_name => is_object($value) ? $value->as_array() : $value ) ) );
+					$changed = arr::merge($changed,array( $modifier => array( $prefix.$column_name => $value instanceof Mango ? $value->as_array() : $value ) ) );
 				}
 				else
 				{
@@ -280,7 +280,7 @@ class Mango_Core {
 					// updated value
 					$value = $this->_object[$column_name];
 
-					if(is_object($value))
+					if(is_object($value) && $this->_columns[$column_name]['type'] === 'has_one')
 					{
 						// value is object - make array
 						$value = $value->as_array();
@@ -337,7 +337,7 @@ class Mango_Core {
 
 		foreach($this->_object as $column_name => $value)
 		{
-			if(is_object($value))
+			if(is_object($value) && $this->_columns[$column_name]['type'] === 'has_one')
 			{
 				$array[$column_name] = $value->as_array();
 			}
@@ -365,7 +365,7 @@ class Mango_Core {
 	{
 		foreach($this->_object as $column_name => $value)
 		{
-			if(is_object($value))
+			if($value instanceof Mango)
 			{
 				$value->set_saved();
 			}
@@ -385,6 +385,16 @@ class Mango_Core {
 	// Validate data before saving
 	public function validate(Validation $array, $save = FALSE)
 	{
+		// The VALIDATION library does not work well with MongoId objects
+		foreach($array as $column => $value)
+		{
+			if($value instanceof MongoId)
+			{
+				$excluded[$column] = $value;
+				$array[$column] = (string) $value;
+			}
+		}
+
 		$safe_array = $array->safe_array();
 
 		if ( ! $array->submitted())
@@ -411,7 +421,7 @@ class Mango_Core {
 				//if (isset($safe_array[$key]))
 				{
 					// Set new data, ignoring any missing fields or fields without rules
-					$this->$key = $value;
+					$this->$key = isset($excluded[$key]) ? $excluded[$key] : $value;
 				}
 			}
 
@@ -455,11 +465,11 @@ class Mango_Core {
 
 				do
 				{
-					if( !$user_defined_id )
+					/*if( !$user_defined_id )
 					{
 						// create a unique ID
 						$update['_id'] = (string) new MongoId;
-					}
+					}*/
 
 					// try to insert data into collection
 					$this->_db->insert($this->_collection_name, $update );
@@ -527,7 +537,7 @@ class Mango_Core {
 		foreach($this->_has_many as $hm)
 		{
 			// Remove each object separately because delete method could be overloaded
-			foreach($this->__get($hm)->as_array() as $h)
+			foreach($this->__get($hm) as $h)
 			{
 				$h->delete();
 			}
@@ -611,13 +621,19 @@ class Mango_Core {
 
 		switch ($column_data['type'])
 		{
-			case 'id':
+			case 'MongoId':
+				if( ! $value instanceof MongoId)
+				{
+					$value = new MongoId;
+				}
+			break;
+			/*case 'id':
 				if(is_object($value))
 				{
 					// cast MongoID to string
 					$value = (string) $value;
 				}
-			break;
+			break;*/
 			case 'enum':
 				if(is_int($value))
 				{
