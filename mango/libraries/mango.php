@@ -465,12 +465,6 @@ class Mango_Core {
 
 				do
 				{
-					/*if( !$user_defined_id )
-					{
-						// create a unique ID
-						$update['_id'] = (string) new MongoId;
-					}*/
-
 					// try to insert data into collection
 					$this->_db->insert($this->_collection_name, $update );
 
