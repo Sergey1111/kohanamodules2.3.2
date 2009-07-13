@@ -919,18 +919,33 @@ class Mango_Core {
 	{
 		if( isset($this->_columns[$column] ) )
 		{
+			// fetch value
+			$value = $this->__isset($column) ? $this->_object[$column] : NULL;
+
+			// fetch column data
 			$column_data = $this->_columns[$column];
 
-			switch($column_data['type'])
+			if(isset($value))
 			{
-				case 'enum':
-					if(isset($column_data['values'][$this->_object[$column]]))
-					{
-						return $column_data['values'][$this->_object[$column]];
-					}
+				switch($column_data['type'])
+				{
+					case 'enum':
+						$value = isset($column_data['values'][$value]) ? $column_data['values'][$value] : NULL;
+					break;
+				}
 			}
 
-			return $this->_object[$column];
+			// check for default value
+			if($value === NULL && isset($column_data['default']))
+			{
+				if( !array_key_exists($column,$this->_object) || !isset($column_data['null']) || !$column_data['null'] )
+				{
+					// default value only applies if value has not been actively set to NULL and NULL values are allowed
+					$value = $column_data['default'];
+				}
+			}
+
+			return $value;
 		}
 		elseif (isset($this->_related[$column] ) )
 		{
