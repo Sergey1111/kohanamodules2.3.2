@@ -133,7 +133,7 @@ class Mango_Core {
 		elseif (!empty($id))
 		{
 			// Find an object by ID
-			$this->find( array($this->unique_key($id) => $id ), 1 );
+			$this->find( $this->unique_criteria($id) , 1 );
 		}
 	}
 
@@ -552,7 +552,7 @@ class Mango_Core {
 		}
 
 		// Delete this object
-		$this->_db->remove( $this->_collection_name, array($this->unique_key($id) => $id), TRUE);
+		$this->_db->remove( $this->_collection_name, $this->unique_criteria($id), TRUE);
 
 		return $this->clear();
 	}
@@ -991,9 +991,9 @@ class Mango_Core {
 		return isset($this->_columns[$column]) ? isset($this->_object[$column]) : isset($this->_related[$column]);
 	}
 
-	public function unique_key($id)
+	public function unique_criteria($id)
 	{
-		return '_id';
+		return array('_id' => $id);
 	}
 
 }
