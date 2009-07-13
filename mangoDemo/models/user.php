@@ -42,6 +42,6 @@ class User_Model extends Mango {
 		if ( ! empty($id) AND is_string($id) AND valid::email($id))
 			return array('email'=>$id);
 
-		return parent::unique_key($id);
+		return parent::unique_criteria($id);
 	}
 }
