@@ -39,7 +39,7 @@ class User_Model extends Mango {
 	// Allows users to be loaded by email.
 	public function unique_criteria($id)
 	{
-		if ( ! empty($id) AND is_string($id) AND valid::email($id))
+		if ( ! empty($id) AND is_string($id) )
 			return array('email'=>$id);
 
 		return parent::unique_criteria($id);
