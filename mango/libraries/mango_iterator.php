@@ -1,8 +1,5 @@
 <?php defined('SYSPATH') OR die('No direct access allowed.');
 
-// NOTE A PHP DRIVER ERROR HAS TO BE SOLVED BEFORE THIS CLASS WORKS PROPERLY
-// http://jira.mongodb.org/browse/PHP-19
-
 class Mango_Iterator implements Iterator, Countable {
 
 	// Class attributes
@@ -21,9 +18,11 @@ class Mango_Iterator implements Iterator, Countable {
 	{
 		$array = array();
 
-		foreach($this->_cursor as $_id => $values)
+		foreach($this->_cursor as $values)
 		{
-			$array[$_id] = Mango::factory($this->_object_name,$values);
+			$id = is_object($values['_id']) ? (string) $values['_id'] : $values['_id'];
+
+			$array[$id] = Mango::factory($this->_object_name,$values);
 		}
 
 		return $array;
