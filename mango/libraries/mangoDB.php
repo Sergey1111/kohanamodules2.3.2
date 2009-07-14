@@ -120,6 +120,33 @@ class MangoDB_Core {
 		return $this->_collections[$name];
 	}
 
+	/* A simple cache
+	 *
+	 * Best performance if you create the collection 'cache' yourself
+	 * and make it a capped collection.
+	 * See: http://www.mongodb.org/display/DOCS/Capped+Collections
+	 *
+	 * Please note there are some limits with capped collections:
+	 * "You may update the existing objects in the collection. However, 
+	 *  the objects must not grow in size. If they do, the update will 
+	 *  fail. (There are some possible workarounds; contact us in the 
+	 *  support forums for more information, if help is needed.)"
+	 *
+	 * I am investigating the limitations, but if you find any, let me know!
+	 */
+
+	public function cache_set($key,$value)
+	{
+		$this->get_collection('cache')->save(array('_id'=>$key,'v'=>serialize($value)));
+	}
+
+	public function cache_get($key)
+	{
+		$item = $this->get_collection('cache')->findOne( array('_id'=>$key) );
+
+		return $item ? unserialize($item['v']) : NULL;
+	}
+
 	/* Mongo */
 
 	public function last_error()
