@@ -41,33 +41,29 @@
  * 1) You can only manage arrays (array column type, embedded has_many relation, has_and_belongs_to_many relation)
  *    at once value/object per save().
  *    This is ok:
- *    $blog->push('posts',$post);
+ *    $blog->posts[] = $post;
  *    $blog->save();
  *    This is not ok!:
- *    $blog->push('posts',$post);
- *    $blog->push('posts',$post2); // this won't be saved
+ *    $blog->posts[] = $post1;
+ *    $blog->posts[] = $post2; // this won't be saved
  *    $blog->save();
 
  * 2) If an value is pushed to/pulled from an array, you CANNOT edit anything else in that array
  *    Mongo does not support $set and $push modifiers accessing the same array.
  *    This is ok (assuming posts are embedded):
  *      $blog->time = time()
- *      $blog->push('posts',$post);
+ *      $blog->posts[] = $post;
  *      $blog->save();
  *    This is not ok!
  *      $posts = $blog->posts;
  *      $posts[0]->text = 'editing some existing post'; // this won't be saved
- *      $blog->push('posts',$a_new_post);
+ *      $posts[] = $post2;
  *      $blog->save();
  *    This is ok though:
- *      $posts = $blog->posts;
- *      $posts[0]->text = 'editing some existing post'; // this won't be saved
+ *      $blog->posts[0]->text = 'editing some existing post';
  *      $blog->save();
  *    As is this:
- *      $posts = $blog->posts;
- *      $posts[] = $new_post1;
- *      $posts[] = $new_post2;
- *      $blog->posts = $posts;
+ *      $blog->posts = array($post1,$post2);
  *      $blog->save();
  *    Although this is not atomic, because this will reset the array completely instead of adding
  *    only the new posts
