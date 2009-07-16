@@ -94,19 +94,20 @@ class MangoDemo_Controller extends Template_Controller {
 		// creating account
 		$account = Mango::factory('account');
 		$account->name = 'testaccount';
+
 		$account->save();
 
 		$content .= Kohana::debug($account->as_array());
 
 		// atomic update
 		$account->name = 'name2';
-		$account->increment('some_counter',5);
+		$account->some_counter->increment(5);
 		$account->save(); // this will invoke an update query with the $set and $inc modifiers
 
 		$content .= Kohana::debug($account->as_array());
 
 		// another update
-		$account->increment('some_counter',1);
+		$account->some_counter->increment();
 		$account->save();
 
 		$content .= Kohana::debug($account->as_array());
@@ -130,7 +131,7 @@ class MangoDemo_Controller extends Template_Controller {
 		$user->account = $account; // (or $user->account_id = $account->_id, same effect)
 		$user->save();
 
-		$content .= Kohana::debug($account->as_array(),$user->as_array());
+		//$content .= Kohana::debug($account->as_array(),$user->as_array());
 
 		// create blog
 		$blog = Mango::factory('blog');
@@ -146,11 +147,15 @@ class MangoDemo_Controller extends Template_Controller {
 		$comment->comment = 'Hello to you to';
 		$comment->time = time();
 
-		// add comment to blog
-		$blog->add($comment); // atomic add using $push
+		// to add a comment to blog (atomic) you can choose:
+		$blog->add($comment);
+		// OR
+		//$blog->comments[] = $comment;
 
 		// save blog (! not comment !)
 		$blog->save(); // note that you can only do ONE push before each save - if you remove this save, the next comment WILL NOT be saved
+
+		$blog->comments[] = $comment;
 
 		// add another comment
 		$comment = Mango::factory('comment');
@@ -158,7 +163,8 @@ class MangoDemo_Controller extends Template_Controller {
 		$comment->comment = 'I like your style';
 		$comment->time = time();
 
-		$blog->add($comment); // atomic add using $push
+		$blog->comments[] = $comment; // atomic add using $push
+		// $blog->add($comment);
 
 		$blog->save();
 
@@ -166,13 +172,19 @@ class MangoDemo_Controller extends Template_Controller {
 		$content .= Kohana::debug($blog->as_array());
 
 		// You can access the comments
+		// $blog->comments->as_array() is also possible
 		foreach($blog->comments as $comment)
 		{
 			$content .= Kohana::debug($comment->as_array());
 		}
 
+		$blog2 = Mango::factory('blog',$blog->_id);
+		
+		$content .= '<hr>' . Kohana::debug($blog2->comments->as_array(),$blog2->get_changed(TRUE)) . '<hr>';
+
 		// To remove a comment
 		//$blog->remove($comment); - this uses the $pull modifier, but that is not implemented in MongoDB yet
+		// unset($blog->comments[1]);
 
 		// Clean up
 		$account->delete();
@@ -235,31 +247,198 @@ class MangoDemo_Controller extends Template_Controller {
 		$account->save();
 
 		// this is atomic
-		$account->push('categories','cat1');
+		$account->categories[] = 'cat1';
+		
+		// as is $account->categories->push('cat1');
 		$account->save();
 
 		// this isn't (but is possible)
 		// $account->categories = array('cat1');
 		// $account->save();
 
-		echo Kohana::debug($account->as_array());
+		$content .= Kohana::debug($account->as_array());
 
 		// try to push the same value
-		$account->push('categories','cat1');
+		$account->categories[] = 'cat1'; 
 
 		echo Kohana::debug($account->as_array());
 
-		$account->push('categories','cat2');
+		$account->categories[] = 'cat2';
 		$account->save();
 
-		echo Kohana::debug($account->as_array());
+		$content .= Kohana::debug($account->as_array());
 
 		// atomic pull (not yet implemented in Mongo)
-		//$account->pull('categories','cat1');
+		//$account->categories->pull('cat1');
+		// OR
+		// unset($account->categories[ $account->categories->find('cat1') ]);
 		//$account->save();
 
 		// Clean up
 		$account->delete();
+	}
+
+	public function demo7()
+	{
+		$this->template->bind('content',$content);
+		$content = '';
+		
+		// An unsaved object
+		// All actions should result in a save query without updates/modifiers (it is inserted into DB)
+		$content .= '<h1>Unsaved objects</h1>';
+
+		/* Counters */
+		$content.='<h2>counters</h2>';
+		
+		$account = Mango::factory('account');
+		$account->some_counter->increment();
+		$content.=Kohana::debug($account->as_array(),$account->get_changed(FALSE)) . '<hr>';
+
+		$account = Mango::factory('account');
+		$account->some_counter->decrement();
+		$content.=Kohana::debug($account->as_array(),$account->get_changed(FALSE)) . '<hr>';
+
+		$account = Mango::factory('account');
+		$account->some_counter = 5;
+		$content.=Kohana::debug($account->as_array(),$account->get_changed(FALSE)) . '<hr>';
+
+		/* Sets */
+		$content.='<h2>sets</h2>';
+
+		$account = Mango::factory('account');
+		$account->categories[] = 'cat1';
+		$content.=Kohana::debug($account->as_array(),$account->get_changed(FALSE)) . '<hr>';
+
+		$account = Mango::factory('account');
+		$account->categories = array('cat1','cat2');
+		$content.=Kohana::debug($account->as_array(),$account->get_changed(FALSE)) . '<hr>';
+
+		/* Arrays */
+		$content.='<h2>arrays</h2>';
+
+		$account = Mango::factory('account');
+		$account->some_array[] = 'cat1';
+		$content.=Kohana::debug($account->as_array(),$account->get_changed(FALSE)) . '<hr>';
+
+		$account = Mango::factory('account');
+		$account->some_array['key'] = 'cat1';
+		$content.=Kohana::debug($account->as_array(),$account->get_changed(FALSE)) . '<hr>';
+
+		$account = Mango::factory('account');
+		$account->some_array = array('cat1','key'=>'bla');
+		$content.=Kohana::debug($account->as_array(),$account->get_changed(FALSE)) . '<hr>';
+
+		// Saved objects
+		// Here we want $modifiers
+		$content .= '<h1>Unsaved objects</h1>';
+
+		/* Counters */
+		$content.='<h2>counters</h2>';
+		
+		$account = Mango::factory('account');
+		$account->name = 'hello';
+		$account->save();
+		$account->some_counter->increment(); // this is atomic (uses $inc)
+		$content.=Kohana::debug($account->as_array(),$account->get_changed(TRUE)) . '<hr>';
+		$account->delete();
+
+		$account = Mango::factory('account');
+		$account->name = 'hello';
+		$account->save();
+		$account->some_counter = 5; // this is NOT atomic (uses $set, not $inc)
+		$content.=Kohana::debug($account->as_array(),$account->get_changed(TRUE)) . '<hr>';
+		$account->delete();
+
+		/* Sets */
+		$content.='<h2>sets</h2>';
+
+		$account = Mango::factory('account');
+		$account->name = 'hello';
+		$account->save();
+		$account->categories[] = 'cat1'; // this is atomic (uses $push)
+		$content.=Kohana::debug($account->as_array(),$account->get_changed(TRUE)) . '<hr>';
+		$account->delete();
+
+		$account = Mango::factory('account');
+		$account->name = 'hello';
+		$account->save();
+		$account->categories = array('cat1','cat2'); // this is not atomic - a full reset of the categories array
+		$content.=Kohana::debug($account->as_array(),$account->get_changed(TRUE)) . '<hr>';
+		$account->delete();
+
+		/* Arrays */
+		$content.='<h2>arrays</h2>';
+
+		$account = Mango::factory('account');
+		$account->name = 'hello';
+		$account->save();
+		$account->some_array[] = 'bla';
+		$content.=Kohana::debug($account->as_array(),$account->get_changed(TRUE)) . '<hr>';
+		$account->delete();
+
+		$account = Mango::factory('account');
+		$account->name = 'hello';
+		$account->save();
+		$account->some_array['key'] = 'bla';
+		$content.=Kohana::debug($account->as_array(),$account->get_changed(TRUE)) . '<hr>';
+		$account->delete();
+
+		$account = Mango::factory('account');
+		$account->name = 'hello';
+		$account->save();
+		$account->some_array = array('key' => 'bla', 'blo');
+		$content.=Kohana::debug($account->as_array(),$account->get_changed(TRUE)) . '<hr>';
+		$account->delete();
+	}
+
+	public function demo8()
+	{
+		$this->template->bind('content',$content);
+		$content = '';
+		
+		// let's simulate a load from DB
+		// notice the array structure - it has to be predefined
+		$account = Mango::factory('account',array(
+			'_id'=>1,
+			'name'=>'test',
+			'report' => array(
+				'total' => 5,
+				'blog1' => array(
+					'views' => 0,
+					'comments'=> 0
+				)
+			)
+		));
+		
+		// but now, atomic counters are easy:
+		
+		$account->report['total']->increment();
+		$account->report['blog1']['views']->increment();
+
+		$content .= Kohana::debug($account->get_changed(TRUE));
+		
+		// simulate changes were saved
+		$account->set_saved();
+		
+		// we can even add counters
+		$account->report['blog2'] = array('views'=>0,'comments'=>0);
+
+		// and they are ready to use as counter
+		$account->report['blog2']['views']->increment();
+
+		// also update an existing counter
+		$account->report['blog1']['views']->increment();
+
+		$content .= Kohana::debug($account->get_changed(TRUE));
+
+		// simulate save
+		$account->set_saved();
+
+		// do some more counting
+		$account->report['blog2']['views']->increment();
+
+		// and now it will inc
+		$content .= Kohana::debug($account->get_changed(TRUE));
 	}
 
 	public function demo12()

@@ -88,7 +88,7 @@
 // $unset support
 // something script to automatically set proper indexes in mongo (foreign keys / unique keys)
 
-class Mango_Core {
+class Mango_Core implements Mango_Interface {
 
 	// Object information
 	protected $_columns = array();
@@ -164,13 +164,13 @@ class Mango_Core {
 			{
 				if( ! isset($this->_columns[$object_name . '_id']) )
 				{
-					$this->_columns[$object_name . '_id'] = array('type'=>'id');
+					$this->_columns[$object_name . '_id'] = array('type'=>'MongoId');
 				}
 			}
 
 			foreach($this->_has_and_belongs_to_many as $object_plural)
 			{
-				$this->_columns[$object_plural . '_ids'] = array('type'=>'array');
+				$this->_columns[$object_plural . '_ids'] = array('type'=>'set');
 			}
 
 			// Initialize DB
@@ -211,7 +211,16 @@ class Mango_Core {
 				$values->sort($sort);
 			}
 
-			return new Mango_Iterator($this->_object_name,$values);
+			$result = new Mango_Iterator($this->_object_name,$values);
+
+			if($limit === 1)
+			{
+				return $result->count() ? $result->current() : NULL;
+			}
+			else
+			{
+				return $result;
+			}
 		}
 	}
 
@@ -259,70 +268,31 @@ class Mango_Core {
 
 		foreach($this->_columns as $column_name => $column_data)
 		{
+			$value = $this->__isset($column_name) ? $this->_object[$column_name] : NULL;
+
 			if (isset($this->_changed[$column_name]))
 			{
-				if($update && is_numeric($this->_object[$column_name]) && is_int($this->_changed[$column_name]))
+				// value has been changed
+				if($value instanceof Mango_Interface)
 				{
-					// value has been incremented
-					$changed = arr::merge($changed,array('$inc' => array( $prefix.$column_name => $this->_changed[$column_name]) ) );
+					$value = $value->as_array();
 				}
-				elseif($update && is_array($this->_object[$column_name]) && is_array($this->_changed[$column_name]) )
-				{
-					// a value has been added or removed from array
-					list($modifier,$value) = $this->_changed[$column_name];
 
-					$changed = arr::merge($changed,array( $modifier => array( $prefix.$column_name => $value instanceof Mango ? $value->as_array() : $value ) ) );
+				if($update)
+				{
+					$changed = arr::merge($changed,array('$set'=>array( $prefix.$column_name => $value) ) );
 				}
 				else
 				{
-					// value has been changed
-
-					// updated value
-					$value = $this->_object[$column_name];
-
-					if(is_object($value) && $this->_columns[$column_name]['type'] === 'has_one')
-					{
-						// value is object - make array
-						$value = $value->as_array();
-					}
-					elseif (is_array($value) && $this->_columns[$column_name]['type'] === 'has_many')
-					{
-						// value is array of objects - make array of arrays
-						$set = array();
-						foreach($value as $object)
-						{
-							$set[] = $object->as_array();
-						}
-						$value = $set;
-					}
-
-					if($update)
-					{
-						$changed = arr::merge($changed,array('$set'=>array( $prefix.$column_name => $value) ) );
-					}
-					else
-					{
-						$changed[$column_name] = $value;
-					}
+					$changed[$column_name] = $value;
 				}
 			}
-			elseif ($column_data['type'] === 'has_one' || $column_data['type'] === 'has_many')
+			elseif ($this->__isset($column_name))
 			{
-				// check embedded data
-				if($this->__isset($column_name))
+				// check any (embedded) objects/arrays/sets
+				if($value instanceof Mango_Interface)
 				{
-					// some variables in object are new
-					if($column_data['type'] === 'has_one')
-					{
-						$changed = arr::merge($changed,$this->__get($column_name)->get_changed($update,$column_name));
-					}
-					else
-					{
-						foreach($this->__get($column_name) as $key => $value)
-						{
-							$changed = arr::merge($changed,$value->get_changed($update,$column_name . '.' . $key));
-						}
-					}
+					$changed = arr::merge($changed, $value->get_changed($update,$column_name));
 				}
 			}
 		}
@@ -337,23 +307,7 @@ class Mango_Core {
 
 		foreach($this->_object as $column_name => $value)
 		{
-			if(is_object($value) && $this->_columns[$column_name]['type'] === 'has_one')
-			{
-				$array[$column_name] = $value->as_array();
-			}
-			else if(is_array($value) && $this->_columns[$column_name]['type'] === 'has_many')
-			{
-				$set = array();
-				foreach($value as $v)
-				{
-					$set[] = $v->as_array();
-				}
-				$array[$column_name] = $set;
-			}
-			else
-			{
-				$array[$column_name] = $value;
-			}
+			$array[$column_name] = $value instanceof Mango_Interface ? $value->as_array() : $value;
 		}
 
 		return $array;
@@ -365,16 +319,9 @@ class Mango_Core {
 	{
 		foreach($this->_object as $column_name => $value)
 		{
-			if($value instanceof Mango)
+			if($value instanceof Mango_Interface)
 			{
 				$value->set_saved();
-			}
-			elseif (is_array($value) && $this->_columns[$column_name]['type'] === 'has_many')
-			{
-				foreach($value as $v)
-				{
-					$v->set_saved();
-				}
 			}
 		}
 
@@ -445,10 +392,10 @@ class Mango_Core {
 	// Save object
 	public function save()
 	{
-		if(! empty($this->_changed))
+		$update = $this->get_changed( $this->_loaded );
+		
+		if(! empty($update))
 		{
-			$update = $this->get_changed( $this->_loaded );
-
 			if($this->_loaded === TRUE)
 			{
 				// Exists in DB - update
@@ -486,7 +433,7 @@ class Mango_Core {
 				if( ! isset($this->_object['id'] ) )
 				{
 					// Store (assigned) MongoID in object
-					$this->_object['_id'] = $this->load_type('_id',$update['_id']);
+					$this->_object['_id'] = $this->load_type('_id',$update['_id'],FALSE);
 				}
 
 				// Everything OK
@@ -548,7 +495,7 @@ class Mango_Core {
 				// we can do DB.eval here
 				echo '<b>todo change into $pull</b><br>';
 				echo Kohana::debug($this->_db->execute('function () {'.
-				'  db.' . $hb . '.find({_id: { $in:[\''. implode('\',\'',$this->$column_name) . '\']}}).forEach( function(obj) {'.
+				'  db.' . $hb . '.find({_id: { $in:[\''. implode('\',\'',$this->$column_name->as_array() ) . '\']}}).forEach( function(obj) {'.
 				'    db.' . $hb . '.update({_id:obj._id},{ $pull : { ' . $foreign_column_name . ':\'' .  $this->_id . '\'}});'.
 				'  });'.
 				'}'));
@@ -595,114 +542,11 @@ class Mango_Core {
 		{
 			if (isset($this->_columns[$column]))
 			{
-				$this->_object[$column] = $this->load_type($column, $value);
+				$this->_object[$column] = $this->load_type($column, $value, FALSE);
 			}
 		}
 
 		return $this;
-	}
-
-	// Load a value into a column
-	protected function load_type($column, $value)
-	{
-		$type = gettype($value);
-
-		// Load column data
-		$column_data = $this->_columns[$column];
-
-		if ($value === NULL AND ! empty($column_data['null']))
-			return $value;
-
-		switch ($column_data['type'])
-		{
-			case 'MongoId':
-				if( ! $value instanceof MongoId)
-				{
-					$value = new MongoId;
-				}
-			break;
-			/*case 'id':
-				if(is_object($value))
-				{
-					// cast MongoID to string
-					$value = (string) $value;
-				}
-			break;*/
-			case 'enum':
-				if(is_int($value))
-				{
-					$value = isset($column_data['values'][$value]) ? $value : NULL;
-				}
-				else
-				{
-					$value = ($key = array_search($value,$column_data['values'])) !== FALSE ? $key : NULL;
-				}
-			break;
-			case 'int':
-				if ($value === '' AND ! empty($column_data['null']))
-				{
-					// Forms will only submit strings, so empty integer values must be null
-					$value = NULL;
-				}
-				elseif ((float) $value > PHP_INT_MAX)
-				{
-					// This number cannot be represented by a PHP integer, so we convert it to a string
-					$value = (string) $value;
-				}
-				else
-				{
-					$value = (int) $value;
-				}
-			break;
-			case 'float':
-				$value = (float) $value;
-			break;
-			case 'boolean':
-				$value = (bool) $value;
-			break;
-			case 'string':
-				$value = (string) $value;
-			break;
-			case 'has_one':
-				if(is_array($value))
-				{
-					$value = Mango::factory($column,$value);
-				}
-				
-				if( ! ($value instanceof Mango) || $value->_object_name !== $column )
-				{
-					$value = NULL;
-				}
-			break;
-			case 'has_many':
-				if(! is_array($value))
-				{
-					$value = array();
-				}
-				else
-				{
-					$object_name = inflector::singular($column);
-					
-					foreach($value as &$object)
-					{
-						if(is_array($object))
-						{
-							$object = Mango::factory($object_name,$object);
-						}
-
-						if( ! ($object instanceof Mango) || $object ->_object_name !== $object_name )
-						{
-							$object = NULL;
-						}
-					}
-
-					// remove all NULL values
-					$value = array_filter($value);
-				}
-			break;
-		}
-
-		return $value;
 	}
 
 	// Serialize info
@@ -730,90 +574,31 @@ class Mango_Core {
 		return $this;
 	}
 
-	// Push a value into an array
-	public function push($column,$value)
-	{
-		// no array
-		if( $this->_columns[$column]['type'] !== 'array' && $this->_columns[$column]['type'] !== 'has_many' )
-			return FALSE;
-
-		// some other change has been scheduled for this column - cannot proceed
-		if(isset($this->_changed[$column]))
-			return FALSE;
-
-		// object has already been added
-		if($this->array_key($column,$value) !== FALSE)
-			return TRUE;
-
-		$this->_changed[$column] = array('$push', $value);
-		$this->_object[$column][] = $value;
-
-		return TRUE;
-	}
-
-	// Pull a value from an array
-	public function pull($column,$value)
-	{
-		// no array
-		if( $this->_columns[$column]['type'] !== 'array' && $this->_columns[$column]['type'] !== 'has_many' )
-			return FALSE;
-
-		// some other change has been scheduled for this column - cannot proceed
-		if(isset($this->_changed[$column]))
-			return FALSE;
-
-		// value has already been removed / was never in array
-		if(($key = $this->array_key($column,$value)) === FALSE)
-			return TRUE;
-
-		$this->_changed[$column] = array('$pull', $value);
-		arr::remove( $key, $this->_object[$column]);
-
-		return TRUE;
-	}
-
-	// Returns key of value in an array, or FALSE is not found
-	protected function array_key($column,$value)
-	{
-		if(!isset($this->$column))
-			return FALSE;
-		
-		if(is_object($value))
-		{
-			// object array - compare on as_array level
-			foreach($this->$column as $key => $object)
-			{
-				if($object->as_array() === $value->as_array())
-				{
-					return $key;
-				}
-			}
-			return FALSE;
-		}
-		// no objects - simple compare
-		else return array_search($value,$this->$column);
-	}
-
 	public function has(Mango $model)
 	{
 		$object_plural = $model->_object_plural;
 
 		if(in_array($object_plural,$this->_has_and_belongs_to_many))
 		{
-			$column = $model->_object_plural . '_ids';
-			return $this->array_key($column,$model->_id) !== FALSE;
+			$column = $object_plural . '_ids';
 		}
 		elseif ( isset($this->_columns[$object_plural]) && $this->_columns[$object_plural]['type'] === 'has_many' )
 		{
-			return array_key( $object_plural, $model) !== FALSE;
+			$column = $object_plural;
 		}
 
-		return FALSE;
+		return isset($column) ? ($this->__isset($column) ? $this->__get($column)->find($model) !== FALSE : FALSE) : FALSE;
 	}
 
 	public function add(Mango $model, $returned = FALSE)
 	{
 		$object_plural = $model->_object_plural;
+
+		if($this->has($model))
+		{
+			// already added
+			return TRUE;
+		}
 
 		if(in_array($object_plural,$this->_has_and_belongs_to_many))
 		{
@@ -823,28 +608,29 @@ class Mango_Core {
 			$column = $model->_object_plural . '_ids';
 
 			// try to push
-			if($this->push($column,$model->_id))
+			if($this->__get($column)->push($model->_id))
 			{
+
 				// push succeed
 				if( isset($this->_related[$object_plural]) )
 				{
 					// Related models have been loaded already, add this one
 					$this->_related[$object_plural][] = $model;
 				}
-	
+
 				if( ! $returned )
 				{
 					// add relation to model as well
 					$model->add($this,TRUE);
 				}
 			}
-			
+
 			// model has been added or was already added
 			return TRUE;
 		}
 		elseif ( isset($this->_columns[$object_plural]) && $this->_columns[$object_plural]['type'] === 'has_many' )
 		{
-			return $this->push( $object_plural, $model);
+			return $this->__get($object_plural)->push($model);
 		}
 		
 		return FALSE;
@@ -854,15 +640,21 @@ class Mango_Core {
 	{
 		$object_plural = $model->_object_plural;
 
+		if(! $this->has($model))
+		{
+			// already removed
+			return TRUE;
+		}
+
 		if(in_array($object_plural,$this->_has_and_belongs_to_many))
 		{
 			if( ! $model->_loaded || ! $this->_loaded )
 				return FALSE;
 
 			$column = $model->_object_plural . '_ids';
-	
+
 			// try to pull
-			if($this->pull($column,$model->_id))
+			if($this->__get($column)->pull($model->_id))
 			{
 				// pull succeed
 				if( isset($this->_related[$object_plural]) )
@@ -878,20 +670,20 @@ class Mango_Core {
 					}
 					$this->_related[$object_plural] = $related;
 				}
-	
+
 				if( ! $returned )
 				{
 					// add relation to model as well
 					$model->remove($this,TRUE);
 				}
 			}
-	
+
 			// model has been removed or was already removed
 			return TRUE;
 		}
 		elseif ( isset($this->_columns[$object_plural]) && $this->_columns[$object_plural]['type'] === 'has_many' )
 		{
-			return $this->pull( $object_plural, $model);
+			return $this->__get($object_plural)->pull($model);
 		}
 
 		return FALSE;
@@ -924,6 +716,93 @@ class Mango_Core {
 		}
 	}
 
+	// Load a value into a column
+	protected function load_type($column, $value)
+	{
+		// Load column data
+		$column_data = $this->_columns[$column];
+
+		if ($value === NULL AND ! empty($column_data['null']))
+			return $value;
+
+		switch($column_data['type'])
+		{
+			case 'MongoId':
+				if( ! $value instanceof MongoId)
+				{
+					$value = new MongoId($value);
+				}
+			break;
+			case 'enum':
+				if(is_int($value))
+				{
+					$value = isset($column_data['values'][$value]) ? $value : NULL;
+				}
+				else
+				{
+					$value = ($key = array_search($value,$column_data['values'])) !== FALSE ? $key : NULL;
+				}
+			break;
+			case 'int':
+				if ($value === '' AND ! empty($column_data['null']))
+				{
+					// Forms will only submit strings, so empty integer values must be null
+					$value = NULL;
+				}
+				elseif ((float) $value > PHP_INT_MAX)
+				{
+					// This number cannot be represented by a PHP integer, so we convert it to a float
+					$value = (float) $value;
+				}
+				else
+				{
+					$value = (int) $value;
+				}
+			break;
+			case 'float':
+				$value = (float) $value;
+			break;
+			case 'boolean':
+				$value = (bool) $value;
+			break;
+			case 'string':
+				$value = (string) $value;
+			break;
+			case 'has_one':
+				if(is_array($value))
+				{
+					$value = Mango::factory($column,$value);
+				}
+				
+				if( ! ($value instanceof Mango) || $value->_object_name !== $column )
+				{
+					$value = NULL;
+				}
+			break;
+			case 'has_many':
+				if(! is_array($value))
+				{
+					$value = NULL;
+				}
+				else
+				{
+					$value = new Mango_Set($value,inflector::singular($column));
+				}
+			break;
+			case 'counter':
+				$value = is_numeric($value) ? new Mango_Counter($value) : NULL;
+			break;
+			case 'array':
+				$value = is_array($value) ? new Mango_Array($value, isset($column_data['type_hint']) ? $column_data['type_hint'] : NULL) : NULL;
+			break;
+			case 'set':
+				$value = is_array($value) ? new Mango_Set($value, isset($column_data['type_hint']) ? $column_data['type_hint'] : NULL) : NULL;
+			break;
+		}
+
+		return $value;
+	}
+
 	// Magic get
 	public function __get($column)
 	{
@@ -935,14 +814,30 @@ class Mango_Core {
 			// fetch column data
 			$column_data = $this->_columns[$column];
 
-			if(isset($value))
+			switch($column_data['type'])
 			{
-				switch($column_data['type'])
-				{
-					case 'enum':
-						$value = isset($column_data['values'][$value]) ? $column_data['values'][$value] : NULL;
-					break;
-				}
+				case 'enum':
+					$value = isset($value) && isset($column_data['values'][$value]) ? $column_data['values'][$value] : NULL;
+				break;
+				case 'array':
+					if($value === NULL)
+					{
+						$this->__set($column,array());
+						$value = $this->_object[$column];
+					}
+				case 'set':
+				case 'has_many':
+					if($value === NULL)
+					{
+						$value = $this->_object[$column] = $this->load_type($column,array(),FALSE);
+					}
+				break;
+				case 'counter':
+					if($value === NULL)
+					{
+						$value = $this->_object[$column] = $this->load_type($column,0,FALSE);
+					}
+				break;
 			}
 
 			// check for default value

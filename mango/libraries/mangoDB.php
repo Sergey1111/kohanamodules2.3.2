@@ -132,12 +132,21 @@ class MangoDB_Core {
 	 *  fail. (There are some possible workarounds; contact us in the 
 	 *  support forums for more information, if help is needed.)"
 	 *
-	 * I am investigating the limitations, but if you find any, let me know!
+	 * The key is to create enough padding in the object, so that 
+	 * whenever it is updated, there is enough space left for the update
 	 */
 
-	public function cache_set($key,$value)
+	/* Store object: $value in cache under key: $key
+	 * Use the $size parameter to set the total length (serialized string length)
+	 * If the actual object has a smaller length, it will be padded with spaces
+	 * allowing future updates
+	 */
+	public function cache_set($key,$value,$size = 100)
 	{
-		$this->get_collection('cache')->save(array('_id'=>$key,'v'=>serialize($value)));
+		$this->get_collection('cache')->save(array(
+			'_id' => $key,
+			'v'   => str_pad(serialize($value),$size)
+		));
 	}
 
 	public function cache_get($key)

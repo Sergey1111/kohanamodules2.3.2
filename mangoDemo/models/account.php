@@ -5,8 +5,13 @@ class Account_Model extends Mango {
 
 	protected $_columns = array(
 	 	'name'         => array('type'=>'name'),
-	 	'some_counter' => array('type'=>'int','null'=>true),
-	 	'categories'   => array('type'=>'array','null'=>true)
+	 	// the attributes below might seem strange - they are :-)
+	 	// but in the demos I needed a counter, a set, an array and an
+	 	// multidimensional array of counters
+	 	'some_counter' => array('type'=>'counter'),
+	 	'categories'   => array('type'=>'set','null'=>true),
+	 	'some_array'   => array('type'=>'array'),
+	 	'report'       => array('type'=>'array','type_hint'=>'counter')
 	);
 
 	protected $_db = 'demo'; //don't use default db config
