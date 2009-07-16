@@ -8,7 +8,7 @@ class Blog_Model extends Mango {
 	 	'title'        => array('type'=>'string'),
 	 	'text'         => array('type'=>'string'),
 		'time_written' => array('type'=>'int'),
-		'time_post'    => array('type'=>'int','null'=>TRUE),
+		'time_post'    => array('type'=>'int'),
 		'comments'     => array('type'=>'has_many')
 	);
 

@@ -9,7 +9,7 @@ class Account_Model extends Mango {
 	 	// but in the demos I needed a counter, a set, an array and an
 	 	// multidimensional array of counters
 	 	'some_counter' => array('type'=>'counter'),
-	 	'categories'   => array('type'=>'set','null'=>true),
+	 	'categories'   => array('type'=>'set'),
 	 	'some_array'   => array('type'=>'array'),
 	 	'report'       => array('type'=>'array','type_hint'=>'counter')
 	);

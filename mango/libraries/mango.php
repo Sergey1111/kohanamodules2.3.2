@@ -695,7 +695,7 @@ class Mango_Core implements Mango_Interface {
 		if (isset($this->_columns[$column]))
 		{
 			// update object
-			$this->_object[$column] = $this->load_type($column,$value);
+			$this->_object[$column] = $value === NULL ? NULL : $this->load_type($column,$value);
 
 			// object is no longer saved
 			$this->_saved = FALSE;
@@ -722,9 +722,6 @@ class Mango_Core implements Mango_Interface {
 		// Load column data
 		$column_data = $this->_columns[$column];
 
-		if ($value === NULL AND ! empty($column_data['null']))
-			return $value;
-
 		switch($column_data['type'])
 		{
 			case 'MongoId':
@@ -744,12 +741,7 @@ class Mango_Core implements Mango_Interface {
 				}
 			break;
 			case 'int':
-				if ($value === '' AND ! empty($column_data['null']))
-				{
-					// Forms will only submit strings, so empty integer values must be null
-					$value = NULL;
-				}
-				elseif ((float) $value > PHP_INT_MAX)
+				if ((float) $value > PHP_INT_MAX)
 				{
 					// This number cannot be represented by a PHP integer, so we convert it to a float
 					$value = (float) $value;
@@ -841,13 +833,10 @@ class Mango_Core implements Mango_Interface {
 			}
 
 			// check for default value
-			if($value === NULL && isset($column_data['default']))
+			if($value === NULL && isset($column_data['default']) && !array_key_exists($column,$this->_object))
 			{
-				if( !array_key_exists($column,$this->_object) || !isset($column_data['null']) || !$column_data['null'] )
-				{
-					// default value only applies if value has not been actively set to NULL and NULL values are allowed
-					$value = $column_data['default'];
-				}
+				// default value only applies if value is NULL and has not been purposely set to NULL
+				$value = $column_data['default'];
 			}
 
 			return $value;
@@ -894,6 +883,15 @@ class Mango_Core implements Mango_Interface {
 	public function __isset($column)
 	{
 		return isset($this->_columns[$column]) ? isset($this->_object[$column]) : isset($this->_related[$column]);
+	}
+
+	public function __unset($column)
+	{
+		// no support for $unset yet, now setting to NULL (if value was set)
+		if($this->__isset($column))
+		{
+			$this->__set($column,NULL);
+		}
 	}
 
 	public function unique_criteria($id)
