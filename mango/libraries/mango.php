@@ -702,8 +702,14 @@ class Mango_Core implements Mango_Interface {
 		{
 			if($value instanceof Mango && $value->_loaded)
 			{
-				// set belongs_to ID
-				$this->__set($column . '_id', $value->_id);
+				$foreign_key = $column . '_id';
+
+				if($this->__get($foreign_key) !== $value->_id)
+				{
+					$this->__set($foreign_key,$value->_id);
+				}
+
+				$this->_related[$column] = $value;
 			}
 			else
 			{
