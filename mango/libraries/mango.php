@@ -266,6 +266,12 @@ class Mango_Core implements Mango_Interface {
 		{
 			$value = $this->__isset($column_name) ? $this->_object[$column_name] : NULL;
 
+			if (isset($column_data['local']) && $column_data['local'])
+			{
+				// local variables are not stored in DB
+				continue;
+			}
+
 			if (isset($this->_changed[$column_name]))
 			{
 				// value has been changed

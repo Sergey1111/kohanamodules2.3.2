@@ -11,7 +11,8 @@ class Account_Model extends Mango {
 	 	'some_counter' => array('type'=>'counter'),
 	 	'categories'   => array('type'=>'set'),
 	 	'some_array'   => array('type'=>'array'),
-	 	'report'       => array('type'=>'array','type_hint'=>'counter')
+	 	'report'       => array('type'=>'array','type_hint'=>'counter'),
+	 	'local_data'   => array('type'=>'string','local'=>TRUE)
 	);
 
 	protected $_db = 'demo'; //don't use default db config
