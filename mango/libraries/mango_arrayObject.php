@@ -178,7 +178,7 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 		}
 		else
 		{
-			return FALSE;
+			return NULL;
 		}
 	}
 }
