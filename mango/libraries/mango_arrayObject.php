@@ -155,4 +155,30 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 			return FALSE;
 		}
 	}
+
+	public function locate($key)
+	{
+		if(is_string($key))
+		{
+			$key = explode('.',$key);
+		}
+
+		$next = array_shift($key);
+
+		if(isset($this[$next]))
+		{
+			if(count($key))
+			{
+				return $this[$next] instanceof Mango_ArrayObject ? $this[$next]->locate($key) : FALSE;
+			}
+			else
+			{
+				return $this[$next];
+			}
+		}
+		else
+		{
+			return FALSE;
+		}
+	}
 }
