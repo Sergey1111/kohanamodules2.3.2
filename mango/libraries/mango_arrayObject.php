@@ -130,4 +130,29 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 		}
 		return FALSE;
 	}
+
+	public function end()
+	{
+		return end($this->as_array());
+	}
+
+	public function pop()
+	{
+		// move pointer to end
+		$arr = $this->as_array();
+		end($arr);
+
+		$key = key($arr);
+
+		if($this->offsetExists($key))
+		{
+			$value = $this->offsetGet($key);
+
+			return $this->offsetUnset($key) !== FALSE ? $value : FALSE;
+		}
+		else
+		{
+			return FALSE;
+		}
+	}
 }
