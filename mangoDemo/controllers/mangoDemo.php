@@ -215,7 +215,7 @@ class MangoDemo_Controller extends Template_Controller {
 
 		// add HABTM relationship between $user and $group1
 		$user->add($group1);
-		
+
 		//SAVE BOTH OBJECTS
 		$user->save();
 		$group1->save();

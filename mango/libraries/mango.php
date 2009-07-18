@@ -253,24 +253,23 @@ class Mango_Core implements Mango_Interface {
 
 	// Returns all changes made to this object after last save
 	// if $update === TRUE, will format updates using modifiers and dot notated keystrings
-	public function get_changed($update, $prefix = NULL)
+	public function get_changed($update, array $prefix= array())
 	{
-		if($prefix !== NULL)
-		{
-			$prefix .= '.';
-		}
-		
 		$changed = array();
 
 		foreach($this->_columns as $column_name => $column_data)
 		{
 			$value = $this->__isset($column_name) ? $this->_object[$column_name] : NULL;
 
-			if (isset($column_data['local']) && $column_data['local'])
+			if (isset($column_data['local']) && $column_data['local'] === TRUE)
 			{
 				// local variables are not stored in DB
 				continue;
 			}
+
+			// prepare prefix
+			$level = $prefix;
+			$level[] = $column_name;
 
 			if (isset($this->_changed[$column_name]))
 			{
@@ -282,11 +281,11 @@ class Mango_Core implements Mango_Interface {
 
 				if($update)
 				{
-					$changed = arr::merge($changed,array('$set'=>array( $prefix.$column_name => $value) ) );
+					$changed = arr::merge($changed,array('$set'=>array( implode('.',$level) => $value) ) );
 				}
 				else
 				{
-					$changed[$column_name] = $value;
+					$changed = arr::merge($changed, arr::build($level,$value) );
 				}
 			}
 			elseif ($this->__isset($column_name))
@@ -294,7 +293,7 @@ class Mango_Core implements Mango_Interface {
 				// check any (embedded) objects/arrays/sets
 				if($value instanceof Mango_Interface)
 				{
-					$changed = arr::merge($changed, $value->get_changed($update,$column_name));
+					$changed = arr::merge($changed, $value->get_changed($update,$level));
 				}
 			}
 		}
@@ -327,7 +326,7 @@ class Mango_Core implements Mango_Interface {
 			}
 		}
 
-		$this->_saved = TRUE;
+		$this->_loaded = $this->_saved = TRUE;
 		$this->_changed = array();
 	}
 
@@ -401,10 +400,7 @@ class Mango_Core implements Mango_Interface {
 			if($this->_loaded === TRUE)
 			{
 				// Exists in DB - update
-				if($this->_db->update($this->_collection_name,array('_id'=>$this->_id), $update, TRUE))
-				{
-					$this->_saved = TRUE;
-				}
+				$this->_db->update($this->_collection_name,array('_id'=>$this->_id), $update, TRUE);
 			}
 			else
 			{
@@ -437,17 +433,11 @@ class Mango_Core implements Mango_Interface {
 					// Store (assigned) MongoID in object
 					$this->_object['_id'] = $this->load_type('_id',$update['_id'],FALSE);
 				}
-
-				// Everything OK
-				$this->_loaded = $this->_saved = TRUE;
 			}
 		}
 
-		if($this->_saved === TRUE)
-		{
-			// Everything is up to date now
-			$this->set_saved();
-		}
+		// Everything is up to date now
+		$this->set_saved();
 
 		return $this->_saved;
 	}
@@ -531,13 +521,13 @@ class Mango_Core implements Mango_Interface {
 	// Load an array of values into object
 	public function load_values(array $values)
 	{
-		if (array_key_exists('_id', $values))
+		if (array_key_exists('_id', $values) || $this->_embedded)
 		{
 			// Replace the object and reset the object status
 			$this->_object = $this->_changed = $this->_related = array();
 
 			// Set the loaded and saved object status based on the primary key
-			$this->_loaded = $this->_saved = ($values['_id'] !== NULL);
+			$this->_loaded = $this->_saved = $this->_embedded || ($values['_id'] !== NULL);
 		}
 
 		foreach ($values as $column => $value)
@@ -612,7 +602,6 @@ class Mango_Core implements Mango_Interface {
 			// try to push
 			if($this->__get($column)->push($model->_id))
 			{
-
 				// push succeed
 				if( isset($this->_related[$object_plural]) )
 				{
@@ -819,16 +808,22 @@ class Mango_Core implements Mango_Interface {
 				case 'enum':
 					$value = isset($value) && isset($column_data['values'][$value]) ? $column_data['values'][$value] : NULL;
 				break;
+				case 'has_one':
+					if($value === NULL)
+					{
+						/*$this->__set($column,Mango::factory($column));
+						$value = $this->_object[$column];*/
+						$value = $this->_object[$column] = Mango::factory($column);
+					}
+				break;
+				case 'set':
+				case 'has_many':
 				case 'array':
 					if($value === NULL)
 					{
-						$this->__set($column,array());
-						$value = $this->_object[$column];
-					}
-				case 'set':
-				case 'has_many':
-					if($value === NULL)
-					{
+						// 'secretly' load type into _object (not via __get, does not modify $this->_changed)
+						// any changes made to this object, are stored in the object's _changed and loaded
+						// when get_changed is run
 						$value = $this->_object[$column] = $this->load_type($column,array(),FALSE);
 					}
 				break;

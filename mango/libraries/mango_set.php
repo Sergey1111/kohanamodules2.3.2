@@ -2,7 +2,7 @@
 
 class Mango_Set extends Mango_ArrayObject {
 
-	public function get_changed($update, $prefix = NULL)
+	public function get_changed($update, array $prefix = array())
 	{
 		if( ! empty($this->_changed) )
 		{
@@ -16,18 +16,21 @@ class Mango_Set extends Mango_ArrayObject {
 
 			$value = $value instanceof Mango_Interface ? $value->as_array() : $value; 
 			
-			return $update ? array( $push ? '$push' : '$pull' => array($prefix => $value) ) : array($prefix => array($value) );
+			return $update ? array( $push ? '$push' : '$pull' => array(implode('.',$prefix) => $value) ) : array(arr::build($prefix,array($value)) );
 		}
 		else
 		{
 			$changed = array();
 			
 			// if nothing is pushed or pulled, we support $set
+			
+			$level = $prefix;
 			foreach($this as $key => $value)
 			{
 				if($value instanceof Mango_Interface)
 				{
-					$changed = arr::merge($changed, $value->get_changed($update, $prefix . $key));
+					$level[] = $key;
+					$changed = arr::merge($changed, $value->get_changed($update, $level));
 				}
 			}
 

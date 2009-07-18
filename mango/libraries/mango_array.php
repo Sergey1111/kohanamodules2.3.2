@@ -2,7 +2,7 @@
 
 class Mango_Array extends Mango_ArrayObject {
 
-	public function get_changed($update, $prefix = NULL)
+	public function get_changed($update, array $prefix = array())
 	{
 		$changed = array();
 
@@ -30,16 +30,17 @@ class Mango_Array extends Mango_ArrayObject {
 
 				if($update)
 				{
-					$changed = arr::merge($changed, array( '$set' => array( $prefix . '.' . $key => $value) ) );
+					$changed = arr::merge($changed, array( '$set' => array( implode('.',$prefix) . '.' . $key => $value) ) );
 				}
 				else
 				{
-					$changed = arr::merge($changed, array( $prefix => array($value) ) );
+					$changed = arr::merge($changed, arr::build($prefix,$value) );
 				}
 			}
 			elseif ($value instanceof Mango_Interface)
 			{
-				$changed = arr::merge($changed, $value->get_changed($update, $prefix . '.' . $key));
+				$prefix[] = $key;
+				$changed = arr::merge($changed, $value->get_changed($update, $prefix));
 			}
 		}
 

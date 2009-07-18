@@ -31,15 +31,15 @@ class Mango_Counter implements Mango_Interface {
 		return $this->_value;
 	}
 
-	public function get_changed($update,$prefix = NULL)
+	public function get_changed($update, array $prefix = array())
 	{
 		if($update)
 		{
-			return ! empty($this->_changed) ? array('$inc' => array($prefix => $this->_changed)) : array();
+			return ! empty($this->_changed) ? array('$inc' => array(implode('.',$prefix) => $this->_changed)) : array();
 		}
 		else
 		{
-			return ! empty($this->_changed) ? array($prefix => $this->_value) : array();
+			return ! empty($this->_changed) ? arr::build($prefix,$this->_value) : array();
 		}
 	}
 

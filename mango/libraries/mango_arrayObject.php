@@ -15,7 +15,7 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 	}
 
 	// Implemented by child classes
-	public function get_changed($update,$prefix = NULL) {}
+	public function get_changed($update, array $prefix = array()) {}
 
 	public function load()
 	{
@@ -55,7 +55,7 @@ class Mango_ArrayObject extends ArrayObject implements Mango_Interface {
 					$value = new Mango_Array($value);
 				break;
 				default:
-					$value = Mango::factory($type_hint,$value);
+					$value = is_object($value) ? $value : Mango::factory($type_hint,$value);
 				break;
 			}
 		}
