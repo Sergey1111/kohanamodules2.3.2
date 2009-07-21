@@ -1,6 +1,6 @@
 <?php
 
-class Car_Model extends Mango_Ext {
+class Car_Model extends Mango {
 
 	protected $_db = 'demo'; //don't use default db config
 

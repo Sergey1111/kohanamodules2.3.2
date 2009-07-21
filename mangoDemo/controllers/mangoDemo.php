@@ -450,7 +450,7 @@ class MangoDemo_Controller extends Template_Controller {
 		$content = '';
 
 		// Create a Spyker car object
-		$car = Mango_Ext::factory('spyker');
+		$car = Mango::factory('spyker');
 
 		// We should have access to the Car_Model columns as well as the Spyker_Model columns
 		$car->price = 1000;
@@ -462,7 +462,7 @@ class MangoDemo_Controller extends Template_Controller {
 		$content .= Kohana::debug($car->as_array());
 
 		// Now create another car
-		$car = Mango_Ext::factory('ferrari');
+		$car = Mango::factory('ferrari');
 
 		$car->price = 750;
 		$car->ferrari_data = 'world';
@@ -474,7 +474,7 @@ class MangoDemo_Controller extends Template_Controller {
 		// Now we have 2 cars saved in the cars collection, one ferrari, one spyker
 		// Let's check - note we use 'car' in the factory method, but we get a fully
 		// extended ferrari/spyker_model in return
-		$cars = Mango_Ext::factory('car')->find();
+		$cars = Mango::factory('car')->find();
 		foreach($cars as $car)
 		{
 			$content .= Kohana::debug($car->as_array());

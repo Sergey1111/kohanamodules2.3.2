@@ -109,9 +109,37 @@ class Mango_Core implements Mango_Interface {
 	protected $_object_name;
 	protected $_object_plural;
 
+	// Mango config data
+	protected static $_config;
+
 	// Factory
 	public static function factory($object_name,$id = NULL)
 	{
+		if(self::$_config === NULL)
+		{
+			// load config
+			self::$_config = Kohana::config('mango');
+		}
+
+		if (is_array($id) && isset(self::$_config['cti']))
+		{
+			// object might be extended - read for extension data
+			while(isset(self::$_config['cti'][$object_name]))
+			{
+				$type_key = key(self::$_config['cti'][$object_name]);
+
+				if (isset($id[$type_key]) && isset(self::$_config['cti'][$object_name][$type_key][$id[$type_key]]))
+				{
+					// extension found - update model_name
+					$object_name = self::$_config['cti'][$object_name][$type_key][$id[$type_key]];
+				}
+				else
+				{
+					break;
+				}
+			}
+		}
+
 		$model = ucfirst($object_name).'_Model';
 		return new $model($id);
 	}
@@ -140,7 +168,10 @@ class Mango_Core implements Mango_Interface {
 		$this->_object_name   = strtolower(substr(get_class($this), 0, -6));
 		$this->_object_plural = inflector::plural($this->_object_name);
 
-		if( !$this->_embedded )
+		// set columns/relationships
+		$this->set_model_definition();
+
+		if (!$this->_embedded )
 		{
 			// Setup DB if not embedded
 			if (empty($this->_collection_name))
@@ -177,8 +208,35 @@ class Mango_Core implements Mango_Interface {
 		}
 	}
 
+	protected function set_model_definition() {}
+
+	// Update columns/relationships during initialization
+	// Primary used in inheritance patterns
+	protected function _set_model_definition(array $definition = NULL)
+	{
+		if(isset($definition['_columns']))
+		{
+			$this->_columns = array_merge($this->_columns,$definition['_columns']);
+		}
+
+		if(isset($definition['_has_one']))
+		{
+			$this->_has_one = array_merge($this->_has_one,$definition['_has_one']);
+		}
+
+		if(isset($definition['_has_many']))
+		{
+			$this->_has_many = array_merge($this->_has_many,$definition['_has_many']);
+		}
+
+		if(isset($definition['_has_and_belongs_to_many']))
+		{
+			$this->_has_and_belongs_to_many = array_merge($this->_has_and_belongs_to_many,$definition['_has_and_belongs_to_many']);
+		}
+	}
+
 	// Find one or more objects (documents) in collection
-	public function find(array $criteria,$limit = NULL,array $sort = NULL,$fields = array())
+	public function find(array $criteria = array(),$limit = NULL,array $sort = NULL,$fields = array())
 	{
 		if($this->_embedded)
 		{
