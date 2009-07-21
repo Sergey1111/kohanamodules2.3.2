@@ -284,31 +284,6 @@ class Mango_Core implements Mango_Interface {
 		return $this->_loaded ? $this->find( array('_id' => $this->_id), 1 ) : $this->clear();
 	}
 
-	// Increment a column
-	public function increment($column,$amount = 1)
-	{
-		if(isset($this->_columns[$column]) && $this->_columns[$column]['type'] === 'int')
-		{
-			if(isset($this->_changed[$column]))
-			{
-				$value = is_int($this->_changed[$column]) ? $this->_changed[$column] + $amount : $this->__get($column) + $amount;
-			}
-			else
-			{
-				$value = $amount;
-			}
-
-			$this->_changed[$column] = $value;
-			$this->_object[$column] = isset($this->$column) ? $this->__get($column) + $amount : $amount;
-
-			return TRUE;
-		}
-		else
-		{
-			return FALSE;
-		}
-	}
-
 	// Returns all changes made to this object after last save
 	// if $update === TRUE, will format updates using modifiers and dot notated keystrings
 	public function get_changed($update, array $prefix= array())
