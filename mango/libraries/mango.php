@@ -389,7 +389,7 @@ class Mango_Core implements Mango_Interface {
 	}
 
 	// Validate data before saving
-	public function validate(Validation $array, $save = FALSE)
+	protected function validate(Validation $array, $save = FALSE)
 	{
 		// The VALIDATION library does not work well with MongoId objects
 		foreach($array as $column => $value)
