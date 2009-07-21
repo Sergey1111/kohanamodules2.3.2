@@ -413,6 +413,11 @@ class Mango_Core implements Mango_Interface {
 				// Pre-fill data
 				$array[$key] = $value;
 			}
+
+			if(count($safe_array))
+			{
+				$array->submitted(TRUE);
+			}
 		}
 
 		// Validate the array
