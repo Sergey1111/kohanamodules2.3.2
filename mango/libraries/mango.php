@@ -178,7 +178,7 @@ class Mango_Core implements Mango_Interface {
 	}
 
 	// Find one or more objects (documents) in collection
-	public function find($criteria,$limit = NULL,array $sort = NULL,$fields = array())
+	public function find(array $criteria,$limit = NULL,array $sort = NULL,$fields = array())
 	{
 		if($this->_embedded)
 		{

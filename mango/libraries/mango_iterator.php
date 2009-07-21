@@ -14,15 +14,24 @@ class Mango_Iterator implements Iterator, Countable {
 		$this->_cursor = $cursor;
 	}
 
+	public function cursor()
+	{
+		return $this->_cursor;
+	}
+
 	public function as_array()
 	{
 		$array = array();
 
-		foreach($this->_cursor as $values)
+		if($this->count())
 		{
-			$id = is_object($values['_id']) ? (string) $values['_id'] : $values['_id'];
-
-			$array[$id] = Mango::factory($this->_object_name,$values);
+			$this->rewind();
+			do
+			{
+				$current = $this->current();
+				$array[ (string) $current->_id ] = $current;
+			}
+			while($this->next());
 		}
 
 		return $array;

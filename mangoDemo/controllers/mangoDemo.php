@@ -441,6 +441,49 @@ class MangoDemo_Controller extends Template_Controller {
 		$content .= Kohana::debug($account->get_changed(TRUE));
 	}
 
+	public function demo9()
+	{
+		// Note: extension support is useful if you have different classes, that inherit
+		// from the same (base) class, but each have different additional columns.
+
+		$this->template->bind('content',$content);
+		$content = '';
+
+		// Create a Spyker car object
+		$car = Mango_Ext::factory('spyker');
+
+		// We should have access to the Car_Model columns as well as the Spyker_Model columns
+		$car->price = 1000;
+		$car->spyker_data = 'hello';
+
+		// this should save in the cars collection
+		$car->save();
+
+		$content .= Kohana::debug($car->as_array());
+
+		// Now create another car
+		$car = Mango_Ext::factory('ferrari');
+
+		$car->price = 750;
+		$car->ferrari_data = 'world';
+
+		$car->save();
+
+		$content .= Kohana::debug($car->as_array());
+
+		// Now we have 2 cars saved in the cars collection, one ferrari, one spyker
+		// Let's check - note we use 'car' in the factory method, but we get a fully
+		// extended ferrari/spyker_model in return
+		$cars = Mango_Ext::factory('car')->find();
+		foreach($cars as $car)
+		{
+			$content .= Kohana::debug($car->as_array());
+
+			// clean up
+			$car->delete();
+		}
+	}
+
 	public function demo12()
 	{
 		$this->template->bind('content',$content);
